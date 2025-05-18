@@ -1,7 +1,4 @@
 flask
 gunicorn
 requests
-<<<<<<< HEAD
-=======
 pytest
->>>>>>> cd5ac3b (Initial commit without secret)
