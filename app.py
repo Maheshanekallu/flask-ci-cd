@@ -2,6 +2,9 @@ from flask import Flask, request, redirect, render_template_string, url_for, jso
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
+JENKINS_URL = "http://localhost:8080/job/Flask-App-CICD/build"
+JENKINS_USER = "maheshnaik"
+JENKINS_API_TOKEN = "115574a1a36468113210582727b4da15be"
 
 # In-memory "database"
 items = []
@@ -62,25 +65,19 @@ def delete_item(index):
 
 # --- GitHub webhook handler ---
 @app.route("/github-webhook/", methods=["POST"])
-ddef github_webhook():
+def github_webhook():
     event = request.headers.get("X-GitHub-Event", "")
     payload = request.json
 
-    print(f"Received GitHub event: {event}")
-    print(f"Payload ref: {payload.get('ref')}")
-
     if event == "push" and payload.get("ref") == "refs/heads/main":
-        # Example: Trigger Jenkins job via API
-        jenkins_url = "http://localhost:8080/job/Flask-App-CICD/build"
-        jenkins_user = "maheshnaik"
-        jenkins_token = "115574a1a36468113210582727b4da15be"
+        jenkins_build_url = f"{JENKINS_URL}?token={JENKINS_TOKEN}"
+        try:
+            response = requests.post(jenkins_build_url, auth=(JENKINS_USER, JENKINS_API_TOKEN))
+            if response.status_code in [200, 201, 202]:
+                return jsonify({"message": "Jenkins job triggered"}), 200
+            else:
+                return jsonify({"message": "Failed to trigger Jenkins", "status_code": response.status_code, "response": response.text}), 500
+        except Exception as e:
+            return jsonify({"message": "Exception triggering Jenkins", "error": str(e)}), 500
 
-        response = requests.post(jenkins_url, auth=(jenkins_user, jenkins_token))
-        if response.status_code == 201:
-            print("Jenkins job triggered successfully!")
-            return jsonify({"status": "jenkins triggered"}), 200
-        else:
-            print(f"Failed to trigger Jenkins job: {response.text}")
-            return jsonify({"status": "failed"}), 500
-
-    return jsonify({"status": "ignored event"}), 200
+    return jsonify({"message": "Event ignored"}), 200
