@@ -1,8 +1,10 @@
 from flask import Flask, request, redirect, render_template_string, url_for, jsonify
 import os
+import requests
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
+
 JENKINS_URL = "http://localhost:8080/job/Flask-App-CICD/build"
 JENKINS_USER = "maheshanekallu"
 JENKINS_API_TOKEN = "115574a1a36468113210582727b4da15be"
@@ -71,14 +73,39 @@ def github_webhook():
     payload = request.json
 
     if event == "push" and payload.get("ref") == "refs/heads/main":
-        jenkins_build_url = f"{JENKINS_URL}?token={JENKINS_TOKEN}"
         try:
-            response = requests.post(jenkins_build_url, auth=(JENKINS_USER, JENKINS_API_TOKEN))
+            # Fetch crumb dynamically (recommended)
+            crumb_data = requests.get(
+                "http://localhost:8080/crumbIssuer/api/json",
+                auth=("maheshnaik", "115574a1a36468113210582727b4da15be")
+            ).json()
+
+            crumb_field = crumb_data["crumbRequestField"]  # Should be 'Jenkins-Crumb'
+            crumb = crumb_data["crumb"]
+
+            headers = {crumb_field: crumb}
+
+            # Trigger Jenkins build
+            response = requests.post(
+                "http://localhost:8080/job/Flask-App-CICD/build",
+                auth=("maheshnaik", "115574a1a36468113210582727b4da15be"),
+                headers=headers
+            )
+
             if response.status_code in [200, 201, 202]:
                 return jsonify({"message": "Jenkins job triggered"}), 200
             else:
-                return jsonify({"message": "Failed to trigger Jenkins", "status_code": response.status_code, "response": response.text}), 500
+                return jsonify({
+                    "message": "Failed to trigger Jenkins",
+                    "status_code": response.status_code,
+                    "response": response.text
+                }), 500
+
         except Exception as e:
             return jsonify({"message": "Exception triggering Jenkins", "error": str(e)}), 500
 
     return jsonify({"message": "Event ignored"}), 200
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
