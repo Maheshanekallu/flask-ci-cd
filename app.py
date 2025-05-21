@@ -3,7 +3,7 @@ from flask import Flask, request, redirect, render_template_string, url_for, jso
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 JENKINS_URL = "http://localhost:8080/job/Flask-App-CICD/build"
-JENKINS_USER = "maheshnaik"
+JENKINS_USER = "maheshanekallu"
 JENKINS_API_TOKEN = "115574a1a36468113210582727b4da15be"
 
 # In-memory "database"
