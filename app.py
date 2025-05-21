@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template_string, url_for
+from flask import Flask, request, redirect, render_template_string, url_for, jsonify
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -27,7 +27,6 @@ def index():
             <ul class="list-group">
                 {% for item in items %}
                     {% set i = loop.index0 %}
-
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <form method="POST" action="/update/{{ i }}" class="d-flex flex-grow-1 me-2">
                         <input type="text" name="item" value="{{ item }}" class="form-control me-2">
@@ -60,6 +59,26 @@ def update_item(index):
 def delete_item(index):
     items.pop(index)
     return redirect(url_for("index"))
+
+# --- GitHub webhook handler ---
+@app.route("/github-webhook/", methods=["POST"])
+def github_webhook():
+    event = request.headers.get("X-GitHub-Event", "")
+    payload = request.json
+
+    if event == "push":
+        ref = payload.get("ref", "")
+        repository = payload.get("repository", {}).get("name", "")
+        print(f"Received push event on ref: {ref} for repository: {repository}")
+
+        # Example: append a message to the in-memory items list on push
+        items.append(f"Push event on {ref} in repo {repository}")
+
+        # TODO: Add real CI/CD or deployment logic here
+
+        return jsonify({"status": "success"}), 200
+
+    return jsonify({"status": "ignored event"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
