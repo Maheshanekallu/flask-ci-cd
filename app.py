@@ -67,18 +67,18 @@ def github_webhook():
     payload = request.json
 
     if event == "push":
-        ref = payload.get("ref", "")
-        repository = payload.get("repository", {}).get("name", "")
-        print(f"Received push event on ref: {ref} for repository: {repository}")
+        # Trigger Jenkins job via API
+        jenkins_url = "http://your-jenkins-server/job/your-job-name/build"
+        jenkins_user = "your_username"
+        jenkins_token = "your_api_token"
 
-        # Example: append a message to the in-memory items list on push
-        items.append(f"Push event on {ref} in repo {repository}")
+        response = requests.post(jenkins_url, auth=(jenkins_user, jenkins_token))
 
-        # TODO: Add real CI/CD or deployment logic here
-
-        return jsonify({"status": "success"}), 200
+        if response.status_code == 201:
+            print("Jenkins job triggered successfully!")
+            return jsonify({"status": "jenkins triggered"}), 200
+        else:
+            print("Failed to trigger Jenkins:", response.text)
+            return jsonify({"status": "jenkins trigger failed"}), 500
 
     return jsonify({"status": "ignored event"}), 200
-
-if __name__ == "__main__":
-    app.run(debug=True)
