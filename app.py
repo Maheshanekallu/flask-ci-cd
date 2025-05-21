@@ -1,7 +1,7 @@
 from flask import Flask, request, redirect, render_template_string, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
 # In-memory "database"
 items = []
@@ -62,23 +62,25 @@ def delete_item(index):
 
 # --- GitHub webhook handler ---
 @app.route("/github-webhook/", methods=["POST"])
-def github_webhook():
+ddef github_webhook():
     event = request.headers.get("X-GitHub-Event", "")
     payload = request.json
 
-    if event == "push":
-        # Trigger Jenkins job via API
-        jenkins_url = "http://your-jenkins-server/job/your-job-name/build"
-        jenkins_user = "your_username"
-        jenkins_token = "your_api_token"
+    print(f"Received GitHub event: {event}")
+    print(f"Payload ref: {payload.get('ref')}")
+
+    if event == "push" and payload.get("ref") == "refs/heads/main":
+        # Example: Trigger Jenkins job via API
+        jenkins_url = "http://localhost:8080/job/Flask-App-CICD/build"
+        jenkins_user = "maheshnaik"
+        jenkins_token = "115574a1a36468113210582727b4da15be"
 
         response = requests.post(jenkins_url, auth=(jenkins_user, jenkins_token))
-
         if response.status_code == 201:
             print("Jenkins job triggered successfully!")
             return jsonify({"status": "jenkins triggered"}), 200
         else:
-            print("Failed to trigger Jenkins:", response.text)
-            return jsonify({"status": "jenkins trigger failed"}), 500
+            print(f"Failed to trigger Jenkins job: {response.text}")
+            return jsonify({"status": "failed"}), 500
 
     return jsonify({"status": "ignored event"}), 200
