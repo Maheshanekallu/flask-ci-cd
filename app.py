@@ -1,5 +1,5 @@
 from flask import Flask
-app = Flask(_name_)
+app = Flask(__name__)
 import os
 
 secret_key = os.getenv('SECRET_KEY')
@@ -14,5 +14,5 @@ def hello():
 def health():
     return 'OK', 200
 
-if _name_ == "_main_":
+if _name_ == "__main__":
     app.run(host='0.0.0.0', port=5000)
