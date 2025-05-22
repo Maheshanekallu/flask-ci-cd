@@ -2,7 +2,7 @@
 FROM python:3.8-slim
 
 # Set working directory to the current directory (optional)
-WORKDIR /home/mahesh/CICD/flask_app
+WORKDIR /app
 
 # Copy current directory contents into the container
 COPY . .
