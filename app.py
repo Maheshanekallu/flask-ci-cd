@@ -23,7 +23,7 @@ def index():
     </head>
     <body>
         <div class="container mt-5">
-            <h2>CRUD Application</h2>
+            <h2>CRUD Application </h2>
             <form method="POST" action="/add" class="mb-3">
                 <div class="input-group">
                     <input type="text" name="item" class="form-control" placeholder="Enter new item" required>

@@ -72,5 +72,5 @@ jobs:
           curl -X POST $RENDER_DEPLOY_API || exit 1
           exit 1
         else
-          echo "✅ Health check passed. Deployment successful."
+          echo "Health check passed. Deployment successful."
         fi
