@@ -13,7 +13,7 @@ jobs:
       DOCKER_IMAGE: maheshanekallu/flask-ci-cd
       STABLE_TAG: stable
       RENDER_DEPLOY_API: https://api.render.com/deploy/srv-d0kmtu3uibrs739ln8dg?key=AQ_j_XTWgoo
-      APP_HEALTH_URL: https://flask-ci-cd-uz0p.onrender.com/health
+      APP_HEALTH_URL: https://flask-cicd-y6se.onrender.com/health
 
     steps:
     - name: Checkout Repository
