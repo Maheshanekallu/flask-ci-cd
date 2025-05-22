@@ -2,41 +2,75 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DOCKER_IMAGE: maheshanekallu/flask-ci-cd
+      STABLE_TAG: stable
+      RENDER_DEPLOY_API: https://api.render.com/deploy/srv-d0kmtu3uibrs739ln8dg?key=AQ_j_XTWgoo
+      APP_HEALTH_URL: https://flask-ci-cd-uz0p.onrender.com/health
+
     steps:
-    - name: Checkout Code
+    - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        node-version: '18'
+        python-version: '3.x'
 
-    - name: Install Dependencies
-      run: npm install
+    - name: Log in to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Run Tests
-      run: npm test
-    deploy:
-      needs: build-and-test
-      runs-on: ubuntu-latest
-      if: success()
+    - name: Build Docker Image
+      run: |
+        docker build -t $DOCKER_IMAGE:${{ github.run_number }} .
 
-      steps:
-      - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd /var/www/your-app
-            git pull origin main
-            pm2 restart app  # or restart your server
+    - name: Tag and Push Docker Image
+      run: |
+        docker tag $DOCKER_IMAGE:${{ github.run_number }} $DOCKER_IMAGE:$STABLE_TAG
+        docker push $DOCKER_IMAGE:${{ github.run_number }}
+        docker push $DOCKER_IMAGE:$STABLE_TAG
+
+    - name: Set up Python environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Application Tests
+      run: |
+        source venv/bin/activate
+        nohup python3 app.py &
+        sleep 10
+        curl -f http://localhost:5000 || exit 1
+
+    - name: Trigger Render Deployment
+      run: |
+        curl -X POST $RENDER_DEPLOY_API
+
+    - name: Health Check and Rollback if needed
+      run: |
+        sleep 15
+        if ! curl -f $APP_HEALTH_URL; then
+          echo "Health check failed. Rolling back..."
+          docker pull $DOCKER_IMAGE:$STABLE_TAG
+          docker tag $DOCKER_IMAGE:$STABLE_TAG $DOCKER_IMAGE:latest
+          docker push $DOCKER_IMAGE:latest
+          curl -X POST $RENDER_DEPLOY_API || exit 1
+          exit 1
+        else
+          echo "✅ Health check passed. Deployment successful."
+        fi
